@@ -1,4 +1,4 @@
-const CACHE_NAME = "actions-suivi-v4";
+const CACHE_NAME = "actions-suivi-v5";
 const ASSETS = [
   "./index.html",
   "./manifest.json",
