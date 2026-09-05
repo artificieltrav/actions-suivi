@@ -42,13 +42,13 @@ exports.handler = async function (event) {
   let symbol = null;
   try {
     const searchRes = await fetch(
-      `https://financialmodelingprep.com/api/v3/search?query=${encodeURIComponent(name)}&limit=5&apikey=${FMP_KEY}`
+      `https://financialmodelingprep.com/stable/search-name?query=${encodeURIComponent(name)}&limit=5&apikey=${FMP_KEY}`
     );
     if (!searchRes.ok) throw new Error("HTTP " + searchRes.status);
     const matches = await searchRes.json();
     if (Array.isArray(matches) && matches.length) {
       const best =
-        matches.find((m) => (m.exchangeShortName || "").includes("Paris") || (m.exchangeShortName || "").includes("EURONEXT")) ||
+        matches.find((m) => ((m.exchangeFullName || m.exchange || "").toLowerCase().includes("paris")) || ((m.exchangeFullName || m.exchange || "").toLowerCase().includes("euronext"))) ||
         matches[0];
       symbol = best.symbol;
     }
@@ -59,11 +59,11 @@ exports.handler = async function (event) {
   if (symbol) {
     try {
       const divRes = await fetch(
-        `https://financialmodelingprep.com/api/v3/historical-price-full/stock_dividend/${symbol}?apikey=${FMP_KEY}`
+        `https://financialmodelingprep.com/stable/dividends?symbol=${symbol}&apikey=${FMP_KEY}`
       );
       if (!divRes.ok) throw new Error("HTTP " + divRes.status);
       const divData = await divRes.json();
-      const hist = (divData && divData.historical) || [];
+      const hist = Array.isArray(divData) ? divData : ((divData && divData.historical) || []);
       const today = new Date().toISOString().slice(0, 10);
       const upcoming = hist.filter((d) => d.paymentDate && d.paymentDate >= today).sort((a, b) => a.paymentDate.localeCompare(b.paymentDate));
       const mostRecent = hist[0];
@@ -80,7 +80,7 @@ exports.handler = async function (event) {
 
     try {
       const earnRes = await fetch(
-        `https://financialmodelingprep.com/api/v3/historical/earning_calendar/${symbol}?apikey=${FMP_KEY}`
+        `https://financialmodelingprep.com/stable/earnings?symbol=${symbol}&apikey=${FMP_KEY}`
       );
       if (!earnRes.ok) throw new Error("HTTP " + earnRes.status);
       const earnData = await earnRes.json();
