@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -73,6 +74,11 @@
   .stock-meta{font-size:12.5px; color:var(--ink-soft);}
   .stock-dots{display:flex; gap:5px;}
   .dot{width:7px;height:7px;border-radius:50%;}
+  .stock-price{display:flex; flex-direction:column; align-items:flex-end; margin-right:4px; flex-shrink:0;}
+  .price-value{font-size:14px; font-weight:700; color:var(--ink); font-family:'Space Grotesk',sans-serif;}
+  .price-change{font-size:12px; font-weight:600; margin-top:1px;}
+  .price-change.up{color:var(--emerald);}
+  .price-change.down{color:var(--coral);}
 
   .empty-state{text-align:center; padding:60px 20px; color:var(--ink-soft);}
   .empty-state .mark{width:56px;height:56px;border-radius:16px;margin:0 auto 18px; background:linear-gradient(135deg,var(--coral-soft),var(--violet-soft)); display:flex;align-items:center;justify-content:center; font-size:24px;}
@@ -218,11 +224,12 @@ async function gatherStockData(name){
     return {
       coral: json.coral || [],
       amber: [], emerald: [], violet: [],
+      price: json.price || null,
       _errors: json.errors || {}
     };
   } catch(e){
     const msg = e.message || "erreur réseau";
-    return { coral: [], amber: [], emerald: [], violet: [], _errors: { coral: msg } };
+    return { coral: [], amber: [], emerald: [], violet: [], price: null, _errors: { coral: msg } };
   }
 }
 
@@ -312,9 +319,24 @@ function renderStockList(){
       return `<span class="dot" style="background:${has?`var(--${c})`:"var(--line)"}"></span>`;
     }).join("");
     const meta = s.loading ? "Chargement…" : (s.lastUpdated ? "Mis à jour "+timeAgo(s.lastUpdated) : "Pas encore chargé");
+    const price = s.data && s.data.price;
+    let priceHtml = "";
+    if (price && typeof price.value === "number"){
+      const up = (price.change || 0) >= 0;
+      const sign = up ? "+" : "";
+      const pct = price.changePercent !== null && price.changePercent !== undefined ? `${sign}${price.changePercent.toFixed(2)}%` : "";
+      priceHtml = `<div class="stock-price">
+        <span class="price-value">${price.value.toFixed(2)} ${escapeHtml(price.currency||"")}</span>
+        ${pct ? `<span class="price-change ${up ? 'up' : 'down'}">${pct}</span>` : ""}
+      </div>`;
+    }
     return `<div class="stock-card" onclick="openStock(${i})">
       <div class="stock-avatar" style="background:${color}">${initials(s.name)}</div>
-      <div class="stock-info"><div class="stock-name">${escapeHtml(s.name)}</div><div class="stock-meta">${meta}</div></div>
+      <div class="stock-info">
+        <div class="stock-name">${escapeHtml(s.name)}</div>
+        <div class="stock-meta">${meta}</div>
+      </div>
+      ${priceHtml}
       <div class="stock-dots">${dots}</div>
     </div>`;
   }).join("");
