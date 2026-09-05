@@ -1,9 +1,11 @@
+
 exports.handler = async function (event) {
   const name = event.queryStringParameters && event.queryStringParameters.name;
   if (!name) {
     return { statusCode: 400, body: JSON.stringify({ error: "missing name" }) };
   }
 
+  const FMP_KEY = process.env.FMP_API_KEY;
   const result = { coral: [], emerald: [], violet: [], errors: {} };
   const UA = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" };
 
@@ -27,58 +29,78 @@ exports.handler = async function (event) {
     result.errors.coral = e.message || "erreur réseau";
   }
 
+  if (!FMP_KEY) {
+    result.errors.emerald = "clé API non configurée sur le serveur";
+    result.errors.violet = "clé API non configurée sur le serveur";
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      body: JSON.stringify(result),
+    };
+  }
+
+  let symbol = null;
   try {
     const searchRes = await fetch(
-      `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(name)}&lang=fr-FR&region=FR&quotesCount=5`,
-      { headers: UA }
+      `https://financialmodelingprep.com/api/v3/search?query=${encodeURIComponent(name)}&limit=5&apikey=${FMP_KEY}`
     );
     if (!searchRes.ok) throw new Error("HTTP " + searchRes.status);
-    const searchData = await searchRes.json();
-    const quotes = searchData.quotes || [];
-    const best = quotes.find((q) => q.quoteType === "EQUITY") || quotes[0];
-
-    if (!best) {
-      result.errors.emerald = "société non identifiée";
-      result.errors.violet = "société non identifiée";
-    } else {
-      const calRes = await fetch(
-        `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${best.symbol}?modules=calendarEvents`,
-        { headers: UA }
-      );
-      if (!calRes.ok) throw new Error("HTTP " + calRes.status);
-      const calData = await calRes.json();
-      const cal =
-        calData.quoteSummary &&
-        calData.quoteSummary.result &&
-        calData.quoteSummary.result[0] &&
-        calData.quoteSummary.result[0].calendarEvents;
-
-      if (cal) {
-        const fmt = (f) => (Array.isArray(f) ? f[0] && f[0].fmt : f && f.fmt) || null;
-        const exDiv = fmt(cal.exDividendDate);
-        const divPay = fmt(cal.dividendDate);
-        if (exDiv || divPay) {
-          result.emerald.push({
-            date: exDiv || divPay,
-            text: exDiv ? "Date de détachement du dividende (ex-dividende)" : "Date de versement du dividende",
-          });
-        } else {
-          result.errors.emerald = "pas de dividende programmé trouvé";
-        }
-        const earnings = cal.earnings && cal.earnings.earningsDate;
-        if (earnings && earnings.length) {
-          result.violet = earnings.slice(0, 2).map((d) => ({ date: d.fmt, text: "Publication de résultats prévue" }));
-        } else {
-          result.errors.violet = "pas de date de résultats trouvée";
-        }
-      } else {
-        result.errors.emerald = "calendrier indisponible";
-        result.errors.violet = "calendrier indisponible";
-      }
+    const matches = await searchRes.json();
+    if (Array.isArray(matches) && matches.length) {
+      const best =
+        matches.find((m) => (m.exchangeShortName || "").includes("Paris") || (m.exchangeShortName || "").includes("EURONEXT")) ||
+        matches[0];
+      symbol = best.symbol;
     }
   } catch (e) {
-    result.errors.emerald = e.message || "erreur réseau";
-    result.errors.violet = e.message || "erreur réseau";
+    result.errors.emerald = result.errors.violet = "recherche société : " + (e.message || "erreur");
+  }
+
+  if (symbol) {
+    try {
+      const divRes = await fetch(
+        `https://financialmodelingprep.com/api/v3/historical-price-full/stock_dividend/${symbol}?apikey=${FMP_KEY}`
+      );
+      if (!divRes.ok) throw new Error("HTTP " + divRes.status);
+      const divData = await divRes.json();
+      const hist = (divData && divData.historical) || [];
+      const today = new Date().toISOString().slice(0, 10);
+      const upcoming = hist.filter((d) => d.paymentDate && d.paymentDate >= today).sort((a, b) => a.paymentDate.localeCompare(b.paymentDate));
+      const mostRecent = hist[0];
+      if (upcoming.length) {
+        result.emerald.push({ date: upcoming[0].paymentDate, text: `Prochain versement estimé : ${upcoming[0].dividend} par action` });
+      } else if (mostRecent) {
+        result.emerald.push({ date: mostRecent.date, text: `Dernier dividende versé : ${mostRecent.dividend} par action` });
+      } else {
+        result.errors.emerald = "pas de dividende trouvé";
+      }
+    } catch (e) {
+      result.errors.emerald = e.message || "erreur réseau";
+    }
+
+    try {
+      const earnRes = await fetch(
+        `https://financialmodelingprep.com/api/v3/historical/earning_calendar/${symbol}?apikey=${FMP_KEY}`
+      );
+      if (!earnRes.ok) throw new Error("HTTP " + earnRes.status);
+      const earnData = await earnRes.json();
+      const today = new Date().toISOString().slice(0, 10);
+      const list = Array.isArray(earnData) ? earnData : [];
+      const upcoming = list.filter((e) => e.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+      if (upcoming.length) {
+        result.violet = upcoming.slice(0, 2).map((e) => ({ date: e.date, text: "Publication de résultats prévue" }));
+      } else if (list.length) {
+        const lastPast = list.sort((a, b) => b.date.localeCompare(a.date))[0];
+        result.violet.push({ date: lastPast.date, text: "Derniers résultats publiés" });
+      } else {
+        result.errors.violet = "pas de date de résultats trouvée";
+      }
+    } catch (e) {
+      result.errors.violet = e.message || "erreur réseau";
+    }
+  } else if (!result.errors.emerald) {
+    result.errors.emerald = "société non identifiée";
+    result.errors.violet = "société non identifiée";
   }
 
   return {
