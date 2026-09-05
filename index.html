@@ -217,14 +217,12 @@ async function gatherStockData(name){
     const json = await res.json();
     return {
       coral: json.coral || [],
-      amber: [],
-      emerald: json.emerald || [],
-      violet: json.violet || [],
+      amber: [], emerald: [], violet: [],
       _errors: json.errors || {}
     };
   } catch(e){
     const msg = e.message || "erreur réseau";
-    return { coral: [], amber: [], emerald: [], violet: [], _errors: { coral: msg, emerald: msg, violet: msg } };
+    return { coral: [], amber: [], emerald: [], violet: [], _errors: { coral: msg } };
   }
 }
 
@@ -355,10 +353,13 @@ function renderDetailData(s){
               ["amber","cat-amber", () => fallbackLink(s.name, '"assemblée générale" '+s.name+" action date", "Rechercher la date d'AG")],
               ["emerald","cat-emerald", () => fallbackLink(s.name, "dividende "+s.name+" action montant date", "Rechercher le dividende")],
               ["violet","cat-violet", () => fallbackLink(s.name, "résultats financiers "+s.name+" action date", "Rechercher les résultats")]];
+  const linkOnlyCats = ["amber", "emerald", "violet"];
   cats.forEach(([key, elId, fallback])=>{
     const el=document.getElementById(elId);
-    if (key === "amber"){
-      el.innerHTML = `<span class="cat-empty">Rarement disponible automatiquement — accès direct ci-dessous.</span>${fallback()}`;
+    if (linkOnlyCats.includes(key)){
+      const label = key === "amber" ? "Rarement disponible automatiquement — accès direct ci-dessous."
+        : "Disponible en accès direct ci-dessous.";
+      el.innerHTML = `<span class="cat-empty">${label}</span>${fallback()}`;
       return;
     }
     if (s.loading){ el.innerHTML = `<span class="cat-empty">Chargement automatique en cours…</span>`; return; }
