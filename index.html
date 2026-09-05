@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#16213E" />
+<title>Actions Suivi</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#FBF9F4; --surface:#FFFFFF; --ink:#16213E; --ink-soft:#5B6478; --line:#EAE6DC;
+    --coral:#FF6B4A; --coral-soft:#FFEDE7;
+    --amber:#FFB800; --amber-soft:#FFF6DF;
+    --emerald:#0FA968; --emerald-soft:#E4F7EE;
+    --violet:#6C63FF; --violet-soft:#EEEDFF;
+    --radius-lg:22px; --radius-md:16px; --radius-sm:10px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; overscroll-behavior:none;}
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif; margin:0; letter-spacing:-0.01em;}
+  button, a{font-family:inherit; cursor:pointer; text-decoration:none;}
+  input{font-family:inherit;}
+  #app{max-width:480px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; position:relative;}
+  .screen{flex:1; display:none; flex-direction:column; padding:24px 20px calc(90px + env(safe-area-inset-bottom)); animation:fadeIn .25s ease;}
+  .screen.active{display:flex;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  #auth-screen{justify-content:center; padding:32px 28px; background:linear-gradient(160deg,#16213E 0%,#1F2B52 55%,#3A3A8C 100%); color:#fff; min-height:100vh;}
+  .auth-brand{display:flex; align-items:center; gap:12px; margin-bottom:40px;}
+  .auth-brand .mark{width:44px;height:44px;border-radius:13px; background:linear-gradient(135deg,var(--coral),var(--violet)); display:flex;align-items:end;justify-content:center;gap:3px;padding:9px 8px;}
+  .auth-brand .mark span{width:5px;border-radius:3px;background:#fff;}
+  .auth-brand .mark span:nth-child(1){height:9px;background:var(--coral-soft);}
+  .auth-brand .mark span:nth-child(2){height:16px;background:var(--amber-soft);}
+  .auth-brand .mark span:nth-child(3){height:12px;background:var(--emerald-soft);}
+  .auth-brand h1{font-size:22px;}
+  .auth-title{font-size:28px; margin-bottom:6px;}
+  .auth-sub{color:#C7CCE6; font-size:15px; margin-bottom:32px; line-height:1.5;}
+  .field{margin-bottom:16px;}
+  .field label{display:block; font-size:13px; color:#C7CCE6; margin-bottom:6px; font-weight:500;}
+  .field input{width:100%; padding:15px 16px; border-radius:var(--radius-md); border:1.5px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.08); color:#fff; font-size:16px; outline:none; transition:border-color .15s;}
+  .field input::placeholder{color:#8890B0;}
+  .field input:focus{border-color:var(--amber);}
+  .field-hint{font-size:12px; color:#8890B0; margin-top:6px;}
+  .btn-primary{width:100%; padding:16px; border:none; border-radius:var(--radius-md); background:linear-gradient(135deg,var(--coral),#FF8A5C); color:#fff; font-size:16px; font-weight:600; margin-top:8px; box-shadow:0 10px 24px -8px rgba(255,107,74,0.55);}
+  .btn-primary:active{transform:scale(0.98);}
+  .auth-switch{text-align:center; margin-top:22px; color:#C7CCE6; font-size:14px;}
+  .auth-switch button{background:none; border:none; color:var(--amber); font-weight:600; font-size:14px;}
+  .auth-error{background:rgba(255,107,74,0.15); border:1px solid rgba(255,107,74,0.4); color:#FFD3C6; padding:10px 14px; border-radius:var(--radius-sm); font-size:13px; margin-bottom:16px; display:none;}
+
+  .topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:22px;}
+  .greeting-eyebrow{font-size:13px; color:var(--ink-soft); font-weight:500;}
+  .greeting{font-size:24px;}
+  .icon-btn{width:42px;height:42px;border-radius:14px; border:none; background:var(--surface); display:flex; align-items:center; justify-content:center; box-shadow:0 2px 10px rgba(22,33,62,0.06);}
+
+  .add-bar{display:flex; gap:10px; margin-bottom:8px;}
+  .add-bar input{flex:1; padding:15px 16px; border-radius:var(--radius-md); border:1.5px solid var(--line); background:var(--surface); font-size:15px; outline:none; color:var(--ink);}
+  .add-bar input:focus{border-color:var(--violet);}
+  .add-bar button{width:52px; border:none; border-radius:var(--radius-md); background:var(--ink); color:#fff; font-size:22px; font-weight:600; display:flex; align-items:center; justify-content:center;}
+  .add-hint{font-size:12px; color:var(--ink-soft); margin-bottom:22px;}
+
+  .section-label{font-size:13px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.06em; margin:4px 0 12px;}
+
+  .stock-list{display:flex; flex-direction:column; gap:12px;}
+  .stock-card{background:var(--surface); border-radius:var(--radius-lg); padding:18px; display:flex; align-items:center; gap:14px; border:1px solid var(--line); box-shadow:0 4px 16px rgba(22,33,62,0.04);}
+  .stock-avatar{width:50px; height:50px; border-radius:15px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:18px; color:#fff;}
+  .stock-info{flex:1; min-width:0;}
+  .stock-name{font-size:16px; font-weight:600; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .stock-meta{font-size:12.5px; color:var(--ink-soft);}
+  .stock-dots{display:flex; gap:5px;}
+  .dot{width:7px;height:7px;border-radius:50%;}
+
+  .empty-state{text-align:center; padding:60px 20px; color:var(--ink-soft);}
+  .empty-state .mark{width:56px;height:56px;border-radius:16px;margin:0 auto 18px; background:linear-gradient(135deg,var(--coral-soft),var(--violet-soft)); display:flex;align-items:center;justify-content:center; font-size:24px;}
+  .empty-state p{font-size:14.5px; line-height:1.5; max-width:260px; margin:0 auto;}
+
+  .detail-header{display:flex; align-items:center; gap:12px; margin-bottom:18px;}
+  .detail-title{flex:1;}
+  .detail-title h2{font-size:21px;}
+  .detail-title .updated{font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
+
+  .btn-refresh{width:100%; padding:15px; border:none; border-radius:var(--radius-md); background:var(--ink); color:#fff; font-weight:600; font-size:15px; margin-bottom:18px; display:flex; align-items:center; justify-content:center; gap:8px;}
+  .btn-refresh:disabled{opacity:0.6;}
+  .spinner{width:16px;height:16px;border-radius:50%; border:2.5px solid rgba(255,255,255,0.35); border-top-color:#fff; animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .cat-card{border-radius:var(--radius-lg); padding:18px; margin-bottom:14px; border:1px solid var(--line);}
+  .cat-card.coral{background:var(--coral-soft); border-color:#FFDBCC;}
+  .cat-card.amber{background:var(--amber-soft); border-color:#FCE8B0;}
+  .cat-card.emerald{background:var(--emerald-soft); border-color:#C7EBD9;}
+  .cat-card.violet{background:var(--violet-soft); border-color:#D9D6FF;}
+  .cat-head{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
+  .cat-dot{width:10px;height:10px;border-radius:50%;}
+  .cat-head h3{font-size:15px; flex:1;}
+  .cat-body{font-size:13.5px; line-height:1.55; color:var(--ink);}
+  .cat-body .item{margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid rgba(22,33,62,0.08);}
+  .cat-body .item:last-child{margin-bottom:0; padding-bottom:0; border-bottom:none;}
+  .cat-body .item a{color:inherit;}
+  .cat-body .item-date{font-weight:600; font-size:12px; opacity:0.75; display:block; margin-bottom:2px;}
+  .cat-empty{font-size:13px; color:var(--ink-soft); font-style:italic; display:block; margin-bottom:8px;}
+  .cat-fallback{display:inline-block; font-size:12.5px; font-weight:600; padding:8px 12px; border-radius:10px; background:rgba(22,33,62,0.06); color:var(--ink);}
+
+  .btn-danger-outline{width:100%; padding:14px; border-radius:var(--radius-md); margin-top:4px; background:transparent; border:1.5px solid #FFCFC2; color:var(--coral); font-weight:600; font-size:14px;}
+
+  .settings-card{background:var(--surface); border-radius:var(--radius-lg); padding:18px; border:1px solid var(--line); margin-bottom:14px;}
+  .settings-card label{display:block; font-size:13px; font-weight:600; margin-bottom:8px;}
+  .settings-card .hint{font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
+  .btn-secondary{width:100%; padding:14px; border-radius:var(--radius-md); border:none; background:var(--ink); color:#fff; font-weight:600; font-size:14.5px;}
+
+  .bottom-nav{position:fixed; bottom:0; left:0; right:0; max-width:480px; margin:0 auto; background:var(--surface); border-top:1px solid var(--line); display:flex; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); gap:6px; z-index:20;}
+  .nav-btn{flex:1; border:none; background:none; padding:8px 4px; border-radius:14px; display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--ink-soft); font-size:11.5px; font-weight:600;}
+  .nav-btn.active{color:var(--ink); background:var(--bg);}
+  .nav-icon{font-size:19px;}
+
+  .toast{position:fixed; left:20px; right:20px; bottom:100px; max-width:440px; margin:0 auto; background:var(--ink); color:#fff; padding:14px 18px; border-radius:var(--radius-md); font-size:13.5px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.25); opacity:0; transform:translateY(10px); transition:all .25s ease; pointer-events:none; z-index:50;}
+  .toast.show{opacity:1; transform:translateY(0);}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <section id="auth-screen" class="screen active">
+    <div class="auth-brand"><div class="mark"><span></span><span></span><span></span></div><h1>Actions Suivi</h1></div>
+    <div id="auth-login">
+      <div class="auth-title">Content de vous revoir</div>
+      <div class="auth-sub">Connectez-vous pour retrouver vos actions suivies.</div>
+      <div class="auth-error" id="login-error"></div>
+      <div class="field"><label>Identifiant</label><input id="login-user" type="text" placeholder="Votre identifiant" autocomplete="username" /></div>
+      <div class="field"><label>Mot de passe</label><input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password" /></div>
+      <button class="btn-primary" onclick="handleLogin()">Se connecter</button>
+      <div class="auth-switch">Pas encore de compte ? <button onclick="showAuth('signup')">Créer un compte</button></div>
+    </div>
+    <div id="auth-signup" style="display:none;">
+      <div class="auth-title">Créer votre compte</div>
+      <div class="auth-sub">Tout reste sur cet appareil — simple et privé.</div>
+      <div class="auth-error" id="signup-error"></div>
+      <div class="field"><label>Identifiant</label><input id="signup-user" type="text" placeholder="Choisissez un identifiant" autocomplete="username" /></div>
+      <div class="field"><label>Mot de passe</label><input id="signup-pass" type="password" placeholder="8 caractères minimum" autocomplete="new-password" /><div class="field-hint">Au moins 8 caractères.</div></div>
+      <div class="field"><label>Confirmer le mot de passe</label><input id="signup-pass2" type="password" placeholder="••••••••" autocomplete="new-password" /></div>
+      <button class="btn-primary" onclick="handleSignup()">Créer mon compte</button>
+      <div class="auth-switch">Déjà un compte ? <button onclick="showAuth('login')">Se connecter</button></div>
+    </div>
+  </section>
+
+  <section id="home-screen" class="screen">
+    <div class="topbar">
+      <div><div class="greeting-eyebrow" id="home-date"></div><h1 class="greeting" id="home-greeting">Bonjour</h1></div>
+      <button class="icon-btn" onclick="goTo('settings')" aria-label="Réglages">⚙️</button>
+    </div>
+    <div class="add-bar">
+      <input id="add-input" type="text" placeholder="Nom d'une société (ex : LVMH, TotalEnergies...)" onkeydown="if(event.key==='Enter')addStock()" />
+      <button onclick="addStock()" aria-label="Ajouter">+</button>
+    </div>
+    <div class="add-hint">Les données se chargent automatiquement à l'ajout.</div>
+    <div class="section-label">Vos actions suivies</div>
+    <div class="stock-list" id="stock-list"></div>
+  </section>
+
+  <section id="detail-screen" class="screen">
+    <div class="detail-header">
+      <button class="icon-btn" onclick="goTo('home')" aria-label="Retour">←</button>
+      <div class="detail-title"><h2 id="detail-name">—</h2><div class="updated" id="detail-updated">Jamais actualisé</div></div>
+    </div>
+    <button class="btn-refresh" id="detail-refresh-btn" onclick="refreshStock()"><span id="refresh-label">Actualiser</span></button>
+    <div id="detail-content">
+      <div class="cat-card coral"><div class="cat-head"><span class="cat-dot" style="background:var(--coral)"></span><h3>Actualités</h3></div><div class="cat-body" id="cat-coral"><span class="cat-empty">Chargement automatique en cours…</span></div></div>
+      <div class="cat-card amber"><div class="cat-head"><span class="cat-dot" style="background:var(--amber)"></span><h3>Assemblée générale</h3></div><div class="cat-body" id="cat-amber"><span class="cat-empty">Rarement disponible automatiquement — accès direct ci-dessous.</span></div></div>
+      <div class="cat-card emerald"><div class="cat-head"><span class="cat-dot" style="background:var(--emerald)"></span><h3>Dividendes</h3></div><div class="cat-body" id="cat-emerald"><span class="cat-empty">Chargement automatique en cours…</span></div></div>
+      <div class="cat-card violet"><div class="cat-head"><span class="cat-dot" style="background:var(--violet)"></span><h3>Résultats</h3></div><div class="cat-body" id="cat-violet"><span class="cat-empty">Chargement automatique en cours…</span></div></div>
+    </div>
+    <button class="btn-danger-outline" onclick="removeCurrentStock()">Retirer cette action du suivi</button>
+  </section>
+
+  <section id="settings-screen" class="screen">
+    <div class="topbar"><div><div class="greeting-eyebrow">Compte</div><h1 class="greeting">Réglages</h1></div><div style="width:42px;"></div></div>
+    <div class="settings-card">
+      <label>Connecté en tant que</label>
+      <div id="settings-username" style="font-size:15px; font-weight:600; margin-bottom:14px;">—</div>
+      <button class="btn-secondary" style="background:var(--coral);" onclick="handleLogout()">Se déconnecter</button>
+    </div>
+    <div class="settings-card">
+      <label>À propos des données</label>
+      <div class="hint">Actualités, dividendes et résultats sont récupérés automatiquement (Yahoo Finance, Google News) — gratuit, sans compte ni clé. Les dates d'assemblée générale sont plus rarement disponibles via ces sources gratuites ; un lien de recherche est alors proposé à la place.</div>
+    </div>
+  </section>
+
+  <nav class="bottom-nav" id="bottom-nav" style="display:none;">
+    <button class="nav-btn active" id="nav-home" onclick="goTo('home')"><span class="nav-icon">🏠</span>Accueil</button>
+    <button class="nav-btn" id="nav-settings" onclick="goTo('settings')"><span class="nav-icon">⚙️</span>Réglages</button>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ===================== UTIL ===================== */
+const AVATAR_COLORS = ["#FF6B4A","#FFB800","#0FA968","#6C63FF","#2B9EB3","#E85D9C"];
+function colorForName(name){ let h=0; for(let i=0;i<name.length;i++) h=name.charCodeAt(i)+((h<<5)-h); return AVATAR_COLORS[Math.abs(h)%AVATAR_COLORS.length]; }
+function initials(name){ return name.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join("").toUpperCase(); }
+async function sha256(str){ const buf=await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str)); return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join(""); }
+function showToast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(showToast._t); showToast._t=setTimeout(()=>t.classList.remove("show"),2800); }
+function escapeHtml(s){ return (s||"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function fallbackLink(name, query, label){
+  return `<a class="cat-fallback" href="https://www.google.com/search?q=${encodeURIComponent(query)}" target="_blank" rel="noopener">${label} ↗</a>`;
+}
+
+/* ===================== RECUPERATION GRATUITE DES DONNEES ===================== */
+/* ===================== RECUPERATION DES DONNEES (via fonction serveur Netlify) ===================== */
+async function gatherStockData(name){
+  try{
+    const res = await fetch(`/.netlify/functions/stock-data?name=${encodeURIComponent(name)}`);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const json = await res.json();
+    return {
+      coral: json.coral || [],
+      amber: [],
+      emerald: json.emerald || [],
+      violet: json.violet || [],
+      _errors: json.errors || {}
+    };
+  } catch(e){
+    const msg = e.message || "erreur réseau";
+    return { coral: [], amber: [], emerald: [], violet: [], _errors: { coral: msg, emerald: msg, violet: msg } };
+  }
+}
+
+/* ===================== STATE / STORAGE ===================== */
+const DB_USER="as_user", DB_STOCKS_PREFIX="as_stocks_", DB_SESSION="as_session";
+let currentUser=null, currentStocks=[], currentDetailStock=null;
+function getStocksKey(){ return DB_STOCKS_PREFIX+currentUser; }
+function loadStocks(){ currentStocks = JSON.parse(localStorage.getItem(getStocksKey())||"[]"); }
+function saveStocks(){ localStorage.setItem(getStocksKey(), JSON.stringify(currentStocks)); }
+
+/* ===================== AUTH ===================== */
+function showAuth(which){
+  document.getElementById("auth-login").style.display = which==="login" ? "block":"none";
+  document.getElementById("auth-signup").style.display = which==="signup" ? "block":"none";
+  document.getElementById("login-error").style.display="none";
+  document.getElementById("signup-error").style.display="none";
+}
+async function handleSignup(){
+  const user=document.getElementById("signup-user").value.trim();
+  const pass=document.getElementById("signup-pass").value;
+  const pass2=document.getElementById("signup-pass2").value;
+  const errEl=document.getElementById("signup-error"); errEl.style.display="none";
+  if(!user||!pass){errEl.textContent="Merci de remplir tous les champs.";errEl.style.display="block";return;}
+  if(pass.length<8){errEl.textContent="Le mot de passe doit contenir au moins 8 caractères.";errEl.style.display="block";return;}
+  if(pass!==pass2){errEl.textContent="Les mots de passe ne correspondent pas.";errEl.style.display="block";return;}
+  const existing=JSON.parse(localStorage.getItem(DB_USER)||"null");
+  if(existing && existing.username===user){errEl.textContent="Cet identifiant existe déjà.";errEl.style.display="block";return;}
+  const passHash=await sha256(pass);
+  localStorage.setItem(DB_USER, JSON.stringify({username:user, passHash}));
+  localStorage.setItem(DB_SESSION, user);
+  currentUser=user; loadStocks(); enterApp();
+}
+async function handleLogin(){
+  const user=document.getElementById("login-user").value.trim();
+  const pass=document.getElementById("login-pass").value;
+  const errEl=document.getElementById("login-error"); errEl.style.display="none";
+  const existing=JSON.parse(localStorage.getItem(DB_USER)||"null");
+  if(!existing){errEl.textContent="Aucun compte trouvé. Créez-en un d'abord.";errEl.style.display="block";return;}
+  const passHash=await sha256(pass);
+  if(existing.username!==user || existing.passHash!==passHash){errEl.textContent="Identifiant ou mot de passe incorrect.";errEl.style.display="block";return;}
+  localStorage.setItem(DB_SESSION, user);
+  currentUser=user; loadStocks(); enterApp();
+}
+function handleLogout(){
+  localStorage.removeItem(DB_SESSION); currentUser=null;
+  document.getElementById("bottom-nav").style.display="none";
+  document.getElementById("login-user").value=""; document.getElementById("login-pass").value="";
+  showAuth("login"); goTo("auth");
+}
+function enterApp(){
+  document.getElementById("settings-username").textContent=currentUser;
+  document.getElementById("bottom-nav").style.display="flex";
+  renderGreeting(); renderStockList(); goTo("home");
+}
+function renderGreeting(){
+  document.getElementById("home-greeting").textContent="Bonjour, "+currentUser;
+  document.getElementById("home-date").textContent=new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+}
+
+/* ===================== NAVIGATION ===================== */
+function goTo(screen){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  const map={auth:"auth-screen",home:"home-screen",detail:"detail-screen",settings:"settings-screen"};
+  document.getElementById(map[screen]).classList.add("active");
+  document.getElementById("nav-home").classList.toggle("active", screen==="home");
+  document.getElementById("nav-settings").classList.toggle("active", screen==="settings");
+  window.scrollTo(0,0);
+}
+
+/* ===================== STOCK LIST ===================== */
+function timeAgo(iso){
+  const diff=Date.now()-new Date(iso).getTime(); const mins=Math.floor(diff/60000);
+  if(mins<1) return "à l'instant"; if(mins<60) return "il y a "+mins+" min";
+  const hours=Math.floor(mins/60); if(hours<24) return "il y a "+hours+" h";
+  return "il y a "+Math.floor(hours/24)+" j";
+}
+function renderStockList(){
+  const list=document.getElementById("stock-list");
+  if(currentStocks.length===0){
+    list.innerHTML=`<div class="empty-state"><div class="mark">📈</div><p>Ajoutez le nom d'une société ci-dessus : ses actualités, dividendes et résultats se chargent automatiquement.</p></div>`;
+    return;
+  }
+  list.innerHTML=currentStocks.map((s,i)=>{
+    const color=colorForName(s.name);
+    const dots=["coral","amber","emerald","violet"].map(c=>{
+      const has = s.data && s.data[c] && s.data[c].length;
+      return `<span class="dot" style="background:${has?`var(--${c})`:"var(--line)"}"></span>`;
+    }).join("");
+    const meta = s.loading ? "Chargement…" : (s.lastUpdated ? "Mis à jour "+timeAgo(s.lastUpdated) : "Pas encore chargé");
+    return `<div class="stock-card" onclick="openStock(${i})">
+      <div class="stock-avatar" style="background:${color}">${initials(s.name)}</div>
+      <div class="stock-info"><div class="stock-name">${escapeHtml(s.name)}</div><div class="stock-meta">${meta}</div></div>
+      <div class="stock-dots">${dots}</div>
+    </div>`;
+  }).join("");
+}
+
+async function addStock(){
+  const input=document.getElementById("add-input");
+  const name=input.value.trim();
+  if(!name) return;
+  if(currentStocks.some(s=>s.name.toLowerCase()===name.toLowerCase())){ showToast("Cette société est déjà suivie."); return; }
+  const stock={name, data:null, lastUpdated:null, loading:true};
+  currentStocks.unshift(stock);
+  saveStocks(); input.value=""; renderStockList();
+  openStock(0);
+  await loadStockData(0);
+}
+
+function removeCurrentStock(){
+  const idx=currentStocks.findIndex(s=>s.name===currentDetailStock);
+  if(idx===-1) return;
+  currentStocks.splice(idx,1); saveStocks(); renderStockList(); goTo("home");
+}
+
+/* ===================== DETAIL ===================== */
+function openStock(index){
+  const s=currentStocks[index];
+  currentDetailStock=s.name;
+  document.getElementById("detail-name").textContent=s.name;
+  renderDetailData(s);
+  goTo("detail");
+}
+
+function renderDetailData(s){
+  document.getElementById("detail-updated").textContent = s.lastUpdated ? "Mis à jour "+timeAgo(s.lastUpdated) : (s.loading ? "Chargement en cours…" : "Jamais actualisé");
+  const cats=[["coral","cat-coral", () => fallbackLink(s.name, s.name+" actualités bourse", "Voir les actualités")],
+              ["amber","cat-amber", () => fallbackLink(s.name, '"assemblée générale" '+s.name+" action date", "Rechercher la date d'AG")],
+              ["emerald","cat-emerald", () => fallbackLink(s.name, "dividende "+s.name+" action montant date", "Rechercher le dividende")],
+              ["violet","cat-violet", () => fallbackLink(s.name, "résultats financiers "+s.name+" action date", "Rechercher les résultats")]];
+  cats.forEach(([key, elId, fallback])=>{
+    const el=document.getElementById(elId);
+    if (key === "amber"){
+      el.innerHTML = `<span class="cat-empty">Rarement disponible automatiquement — accès direct ci-dessous.</span>${fallback()}`;
+      return;
+    }
+    if (s.loading){ el.innerHTML = `<span class="cat-empty">Chargement automatique en cours…</span>`; return; }
+    const items = s.data && s.data[key];
+    if(!items || !items.length){
+      const reason = s.data && s.data._errors && s.data._errors[key];
+      el.innerHTML = `<span class="cat-empty">Rien trouvé automatiquement${reason ? " (" + escapeHtml(reason) + ")" : ""}.</span>${fallback()}`;
+      return;
+    }
+    el.innerHTML = items.map(it => `<div class="item">
+      ${it.date ? `<span class="item-date">${escapeHtml(it.date)}</span>` : ""}
+      ${it.link ? `<a href="${it.link}" target="_blank" rel="noopener">${escapeHtml(it.text)}</a>` : escapeHtml(it.text)}
+    </div>`).join("") + fallback();
+  });
+}
+
+async function loadStockData(index){
+  const s = currentStocks[index];
+  s.loading = true;
+  renderStockList();
+  if (currentDetailStock === s.name) renderDetailData(s);
+  try{
+    const data = await gatherStockData(s.name);
+    s.data = data;
+    s.lastUpdated = new Date().toISOString();
+  } catch(e){
+    console.warn(e);
+    showToast("Certaines données n'ont pas pu être récupérées.");
+  } finally {
+    s.loading = false;
+    saveStocks();
+    renderStockList();
+    if (currentDetailStock === s.name) renderDetailData(s);
+  }
+}
+
+async function refreshStock(){
+  const btn=document.getElementById("detail-refresh-btn");
+  const label=document.getElementById("refresh-label");
+  btn.disabled=true; label.innerHTML=`<span class="spinner"></span> Actualisation…`;
+  const idx = currentStocks.findIndex(s=>s.name===currentDetailStock);
+  if (idx !== -1) await loadStockData(idx);
+  btn.disabled=false; label.textContent="Actualiser";
+  showToast("Données actualisées.");
+}
+
+/* ===================== INIT ===================== */
+window.addEventListener("load", () => {
+  if ("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
+  const session=localStorage.getItem(DB_SESSION);
+  const existing=JSON.parse(localStorage.getItem(DB_USER)||"null");
+  if (session && existing && existing.username===session){
+    currentUser=session; loadStocks(); enterApp();
+  } else {
+    showAuth(existing ? "login" : "signup"); goTo("auth");
+  }
+});
+</script>
+</body>
+</html>
