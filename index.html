@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -79,6 +78,7 @@
   .price-change{font-size:12px; font-weight:600; margin-top:1px;}
   .price-change.up{color:var(--emerald);}
   .price-change.down{color:var(--coral);}
+  .price-error{font-size:10.5px; color:var(--ink-soft); font-style:italic; max-width:80px; text-align:right; display:block;}
 
   .empty-state{text-align:center; padding:60px 20px; color:var(--ink-soft);}
   .empty-state .mark{width:56px;height:56px;border-radius:16px;margin:0 auto 18px; background:linear-gradient(135deg,var(--coral-soft),var(--violet-soft)); display:flex;align-items:center;justify-content:center; font-size:24px;}
@@ -329,6 +329,9 @@ function renderStockList(){
         <span class="price-value">${price.value.toFixed(2)} ${escapeHtml(price.currency||"")}</span>
         ${pct ? `<span class="price-change ${up ? 'up' : 'down'}">${pct}</span>` : ""}
       </div>`;
+    } else if (!s.loading){
+      const reason = s.data && s.data._errors && s.data._errors.price;
+      priceHtml = `<div class="stock-price"><span class="price-error">${reason ? escapeHtml(reason) : "cours indispo"}</span></div>`;
     }
     return `<div class="stock-card" onclick="openStock(${i})">
       <div class="stock-avatar" style="background:${color}">${initials(s.name)}</div>
