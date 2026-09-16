@@ -1,3 +1,4 @@
+
 exports.handler = async function (event) {
   const name = event.queryStringParameters && event.queryStringParameters.name;
   if (!name) {
@@ -29,20 +30,24 @@ exports.handler = async function (event) {
     result.errors.coral = e.message || "erreur réseau";
   }
 
-  // ---- Cours actuel : identifier le ticker (FMP, gratuit) puis interroger Yahoo Chart (gratuit) ----
-  let symbol = null;
+  // ---- Cours actuel : identifier des candidats (FMP, gratuit) puis tester chacun sur Yahoo Chart (gratuit) ----
+  let candidates = [];
   if (FMP_KEY) {
     try {
       const searchRes = await fetch(
-        `https://financialmodelingprep.com/stable/search-name?query=${encodeURIComponent(name)}&limit=5&apikey=${FMP_KEY}`
+        `https://financialmodelingprep.com/stable/search-name?query=${encodeURIComponent(name)}&limit=8&apikey=${FMP_KEY}`
       );
       if (searchRes.ok) {
         const matches = await searchRes.json();
         if (Array.isArray(matches) && matches.length) {
-          const best =
-            matches.find((m) => ((m.exchangeFullName || m.exchange || "").toLowerCase().includes("paris")) || ((m.exchangeFullName || m.exchange || "").toLowerCase().includes("euronext"))) ||
-            matches[0];
-          symbol = best.symbol;
+          // On priorise Paris/Euronext, mais on garde tous les candidats en secours
+          const scored = matches.map((m) => {
+            const exch = (m.exchangeFullName || m.exchange || "").toLowerCase();
+            const isParis = exch.includes("paris") || exch.includes("euronext");
+            return { symbol: m.symbol, priority: isParis ? 0 : 1 };
+          });
+          scored.sort((a, b) => a.priority - b.priority);
+          candidates = scored.map((s) => s.symbol).filter(Boolean);
         }
       }
     } catch (e) {
@@ -50,31 +55,35 @@ exports.handler = async function (event) {
     }
   }
 
-  if (symbol) {
-    try {
-      const chartRes = await fetch(
-        `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?range=1d&interval=1d`,
-        { headers: UA }
-      );
-      if (!chartRes.ok) throw new Error("HTTP " + chartRes.status);
-      const chartData = await chartRes.json();
-      const meta = chartData && chartData.chart && chartData.chart.result && chartData.chart.result[0] && chartData.chart.result[0].meta;
-      if (meta && typeof meta.regularMarketPrice === "number") {
-        const price = meta.regularMarketPrice;
-        const prevClose = meta.chartPreviousClose || meta.previousClose;
-        const change = typeof prevClose === "number" ? price - prevClose : null;
-        const changePercent = change !== null && prevClose ? (change / prevClose) * 100 : null;
-        result.price = {
-          value: price,
-          change,
-          changePercent,
-          currency: meta.currency || "",
-        };
-      } else {
-        result.errors.price = "cours indisponible";
+  if (candidates.length) {
+    let lastErr = null;
+    let found = false;
+    for (const symbol of candidates.slice(0, 4)) {
+      try {
+        const chartRes = await fetch(
+          `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1d&interval=1d`,
+          { headers: UA }
+        );
+        if (!chartRes.ok) { lastErr = new Error("HTTP " + chartRes.status); continue; }
+        const chartData = await chartRes.json();
+        const meta = chartData && chartData.chart && chartData.chart.result && chartData.chart.result[0] && chartData.chart.result[0].meta;
+        if (meta && typeof meta.regularMarketPrice === "number") {
+          const price = meta.regularMarketPrice;
+          const prevClose = meta.chartPreviousClose || meta.previousClose;
+          const change = typeof prevClose === "number" ? price - prevClose : null;
+          const changePercent = change !== null && prevClose ? (change / prevClose) * 100 : null;
+          result.price = { value: price, change, changePercent, currency: meta.currency || "" };
+          found = true;
+          break;
+        } else {
+          lastErr = new Error("cours indisponible");
+        }
+      } catch (e) {
+        lastErr = e;
       }
-    } catch (e) {
-      result.errors.price = e.message || "erreur réseau";
+    }
+    if (!found) {
+      result.errors.price = (lastErr && lastErr.message) || "cours indisponible";
     }
   } else {
     result.errors.price = "société non identifiée";
