@@ -1,4 +1,3 @@
-
 exports.handler = async function (event) {
   const name = event.queryStringParameters && event.queryStringParameters.name;
   if (!name) {
