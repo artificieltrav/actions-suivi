@@ -1,5 +1,4 @@
-
-const CACHE_NAME = "actions-suivi-v6";
+const CACHE_NAME = "actions-suivi-v7";
 const ASSETS = [
   "./index.html",
   "./manifest.json",
@@ -25,7 +24,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
-  // Ne jamais mettre en cache les liens externes (Google, Yahoo, proxys, etc.)
+  // Ne jamais mettre en cache les liens externes (Google, Yahoo, FMP, etc.)
   if (url.origin !== self.location.origin) return;
 
   // Réseau en priorité : garantit qu'une mise à jour déployée est toujours vue.
