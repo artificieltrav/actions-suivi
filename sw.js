@@ -30,12 +30,3 @@ self.addEventListener("fetch", (event) => {
   // Réseau en priorité : garantit qu'une mise à jour déployée est toujours vue.
   // Le cache ne sert que de secours si l'appareil est hors-ligne.
   event.respondWith(
-    fetch(event.request, { cache: "no-store" })
-      .then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        return response;
-      })
-      .catch(() => caches.match(event.request))
-  );
-});
