@@ -26,3 +26,6 @@
   button, a{font-family:inherit; cursor:pointer; text-decoration:none;}
   input{font-family:inherit;}
   #app{max-width:480px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; position:relative;}
+  .screen{flex:1; display:none; flex-direction:column; padding:24px 20px calc(90px + env(safe-area-inset-bottom)); animation:fadeIn .25s ease;}
+  .screen.active{display:flex;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
